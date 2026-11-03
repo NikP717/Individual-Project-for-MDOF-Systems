@@ -34,35 +34,16 @@ class DataPlotter():
 
     def _contour_plot(self, attr: PlotAttributes):
         df = self.df
-        x = df[attr.x_axis].to_numpy()
-        y = df[attr.y_axis].to_numpy()
-        z = df[attr.z_axis].to_numpy()
-        triang = mtri.Triangulation(x, y)
-        nx, ny = 1000,1000
-        xi = np.linspace(x.min(), x.max(), nx)
-        yi = np.linspace(y.min(), y.max(), ny)
-        Xi, Yi = np.meshgrid(xi, yi)
+        Z = df.pivot(index=attr.y_axis,columns=attr.x_axis,values=attr.z_axis).sort_index().sort_index(axis=1)
 
-        interpolator = mtri.LinearTriInterpolator(triang, z)
-        Zi = interpolator(Xi, Yi)
-
-        # Plot filled contours
         fig, ax = plt.subplots(figsize=(10, 7))
-
-        contour = ax.contourf(
-            Xi, Yi, Zi,
-            levels=1000,
-            cmap="viridis"
-        )
-
+        contour = ax.contourf(Z.columns.to_numpy(),Z.index.to_numpy(),Z.to_numpy(),levels=100,cmap="viridis")
         fig.colorbar(contour, ax=ax, label=attr.contour_label)
 
         ax.set_xlabel(attr.xlabel)
         ax.set_ylabel(attr.ylabel)
         ax.set_title(attr.plot_name)
-        plt.title(attr.plot_title)
         fig.tight_layout()
-
         self._save_plot(fig, attr)
 
     def _2d_plot(self, attr: PlotAttributes):
@@ -77,7 +58,7 @@ class DataPlotter():
         ax.set_title(attr.plot_name)
         plt.title(attr.plot_title)
         ax.grid()
-        ax.plot(x, y, 'kx-')
+        ax.plot(x, y, 'k-')
         fig.tight_layout()
 
         self._save_plot(fig, attr)
@@ -105,8 +86,8 @@ class DataPlotter():
 
 class DataAnalyser():
     @classmethod
-    def open_data(cls, folder_name: str) -> pd.DataFrame:
-        df = Dataset.load_entire_dataframe(folder_name)
+    def open_data(cls, folder_name: str, columns: list = None) -> pd.DataFrame:
+        df = Dataset.load_entire_dataframe(folder_name, columns)
         return df
     
     @classmethod

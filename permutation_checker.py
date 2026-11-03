@@ -3,10 +3,10 @@ import numpy as np
 fix_c = False
 fix_k = False
 k_range = [1,10000]
-kstep = 100
-dof = 3
+kstep = 10
+dof = 2
 c_range = [0.01,5]
-cstep = 0.1
+cstep = 0.01
 
 k_value_array = np.arange(k_range[0],k_range[1]+kstep, kstep).tolist()
 c_value_array = np.arange(c_range[0],c_range[1]+cstep, cstep).tolist()

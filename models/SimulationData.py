@@ -3,7 +3,8 @@ from dataclasses import dataclass
 import pandas as pd
 from pathlib import Path
 import pyarrow.parquet as pq
-
+import polars as pl
+import time
 
 PARAMETERS = ["M_kg", "C_Nsm", "K_Nm", "RMS_KE_J"]
 
@@ -46,11 +47,25 @@ class Dataset():
             self._save_dataset_segment()
 
     @classmethod
-    def load_entire_dataframe(cls, name: str) -> pd.DataFrame:
+    def load_entire_dataframe(cls, name: str, columns: list = None) -> pd.DataFrame:
+        print("loading")
+        time_0 = time.perf_counter()
         project_dir = Path(__file__).resolve().parent.parent
         data_dir = project_dir / "DATA" / name
-        files = sorted(data_dir.glob("*.parquet"))
-        return pq.read_table(files).to_pandas()
+        if columns is None:
+            return pl.scan_parquet(str(data_dir / "*.parquet")).collect().to_pandas()
+        a = pl.scan_parquet(str(data_dir / "*.parquet"))
+        print("scan done")
+        print(f"{time.perf_counter()-time_0:.2f} s")
+        a=a.select(columns)
+        print("columns done")
+        print(f"{time.perf_counter()-time_0:.2f} s")
+        a= a.collect()
+        print("collection done (lazyframe)")
+        print(f"{time.perf_counter()-time_0:.2f} s")
+        a=a.to_pandas()
+        print("pandas conversion done")
+        print(f"{time.perf_counter()-time_0:.2f} s")
 
     @classmethod
     def dataset_to_excel(cls, name: str, dataset: pd.DataFrame) -> None:
