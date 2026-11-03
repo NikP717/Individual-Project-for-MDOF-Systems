@@ -74,11 +74,13 @@ class BaseMethod(ABC):
 class ManualParameterSweep(BaseMethod):
     def run(self, fix_k = False, fix_c = False) -> None:
         self.start_timer()
-        k_value_array = np.arange(self.config.k_range[0],self.config.k_range[1]+self.config.kstep, self.config.kstep).tolist()
-        c_value_array = np.arange(self.config.c_range[0],self.config.c_range[1]+self.config.cstep, self.config.cstep).tolist()
+        if not fix_k:
+            k_value_array = np.arange(self.config.k_range[0],self.config.k_range[1]+self.config.kstep, self.config.kstep).tolist()
+        if not fix_c:
+            c_value_array = np.arange(self.config.c_range[0],self.config.c_range[1]+self.config.cstep, self.config.cstep).tolist()
         if fix_c:
             permutations = len(k_value_array)**(self.DOF-1)#*len(c_value_array)**(self.DOF-1)
-        if fix_k:
+        elif fix_k:
             permutations = len(c_value_array)**(self.DOF-1)
         else:
             permutations = len(k_value_array)**(self.DOF-1)*len(c_value_array)**(self.DOF-1)
@@ -90,18 +92,18 @@ class ManualParameterSweep(BaseMethod):
             self.push_data_sample(sample)
 
         if fix_k:
-            for k_values in product(k_value_array, repeat=self.DOF-1):
-                forcing_fq = self.FQ_HZ
-                if forcing_fq == 0:
-                    forcing_fq = None
-                self.k_array[1:] = k_values
-                _run_system(forcing_fq)
-        elif fix_c:
             for c_values in product(c_value_array, repeat=self.DOF-1):
                 forcing_fq = self.FQ_HZ
                 if forcing_fq == 0:
                     forcing_fq = None
                 self.c_array[1:] = c_values
+                _run_system(forcing_fq)
+        elif fix_c:
+            for k_values in product(k_value_array, repeat=self.DOF-1):
+                forcing_fq = self.FQ_HZ
+                if forcing_fq == 0:
+                    forcing_fq = None
+                self.k_array[1:] = k_values
                 _run_system(forcing_fq)
         else:
             for k_values in product(k_value_array, repeat=self.DOF-1):
