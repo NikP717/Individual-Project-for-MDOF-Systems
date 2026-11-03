@@ -1,34 +1,40 @@
-from models.SimulationData import Dataset
-import numpy as np
-import matplotlib.pyplot as plt
 from models.ForwardDesignSearchMethods import ManualParameterSweep, MethodConfig
-from models.AnalysisTools import PlotAttributes, DataPlotter, DataAnalyser
+from dataclasses import dataclass
+WALL_CONNECT_SPRING = 100 #N/m
+WALL_FORCE = 1 #N
+WALL_CONNECT_DAMPER = 1 #Ns/m
+WALL_MASS = 1 # kg
+
+@dataclass
+class MethodAttr:
+    name: str
+    dof: int
+    k_range: list
+    k_step: int
+    c_range: list
+    c_step: int
+    fix_k: bool = False
+    fix_c: bool = False
+
+    def unwrap_attr(self):
+        return [self.name, self.dof, self.k_range, self.k_step, self.c_range, self.c_step, self.fix_k, self.fix_c]
+
+def run_config_and_method(name, dof, k_range, k_step, c_range, c_step, fix_k=False, fix_c=False):
+    config = MethodConfig(dataset_name=name, DOF=dof, wall_connection_mass=WALL_MASS, wall_connection_spring=WALL_CONNECT_SPRING,
+                        wall_connection_damper=WALL_CONNECT_DAMPER,wall_force=WALL_FORCE,k_range=k_range,kstep=k_step,c_range=c_range,cstep=c_step)
+    method = ManualParameterSweep(config)
+    method.run(fix_k=fix_k, fix_c=fix_c)
+
 
 def main():
-    NAME = "3DOF_TEST_1_FIX_C"
-    DOF = 3
-
-    k_range = [1,10000]
-    k_step = 1
-    c_range = [0.01,5]
-    c_step = 0.1
-    config = MethodConfig(dataset_name=NAME, DOF=DOF, wall_connection_mass=1, wall_connection_spring=100,
-                          wall_connection_damper=1,wall_force=1,k_range=k_range,kstep=k_step,c_range=c_range,cstep=c_step)
-    method = ManualParameterSweep(config)
-    method.run()
-    
-    df = DataAnalyser.open_data(NAME)
-    df['Para'] = (df['RMS_KE_J_2'] - df['RMS_KE_J_1'])
-    row = DataAnalyser.locate_data_maxima(df, ['Para'])
-    DataAnalyser.validate_data_row(DOF, row)
-    # Dataset.dataset_to_excel(NAME, df)
-    # PARAMETERS = ["M_kg", "C_Nsm", "K_Nm", "RMS_KE_J"]
-    attr = PlotAttributes(NAME,'2D_Contour','K_Nm_2','RMS_KE_J_2',None, None, 'K_2', 'KE_2', None)
-    plotter = DataPlotter(DOF, df)
-    plotter.plot_data(attr)
-    plt.show()
-    #TODO: Create automated data analysis regardless of DOF to get rid of this bottom bottle neck, same with data verification 
-    # (make it so i can take any row and plot it dynamically and compare the difference)
+    method = MethodAttr(name="2DOF_FIXC_1",dof=2,k_range=[1,100000],k_step=0.1,c_range=None,c_step=None,fix_k=False,fix_c=True)
+    run_config_and_method(*method.unwrap_attr())
+    method = MethodAttr(name="2DOF_FIXK_1",dof=2,k_range=None,k_step=None,c_range=[0.01,5],c_step=0.001,fix_k=True,fix_c=False)
+    run_config_and_method(*method.unwrap_attr())
+    method = MethodAttr(name='2DOF_1', dof = 2, k_range = [1, 100000], k_step=10, c_range = [0.01, 5], c_step=0.01, fix_k=False,fix_c=False)
+    run_config_and_method(*method.unwrap_attr())
+    method = MethodAttr(name='3DOF_1', dof = 3, k_range = [1, 10000], k_step=100, c_range = [0.01, 5], c_step=0.1, fix_k=False,fix_c=False)
+    run_config_and_method(*method.unwrap_attr())
     # do large data sweeps for 2,3,4 DOF systems repeatedly with new plotting systems and see what data we can draw
     # Once done add an optimisiation inverse design stream by adding anew code 
 

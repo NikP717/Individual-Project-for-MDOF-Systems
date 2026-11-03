@@ -72,23 +72,46 @@ class BaseMethod(ABC):
 
 
 class ManualParameterSweep(BaseMethod):
-    def run(self) -> None:
+    def run(self, fix_k = False, fix_c = False) -> None:
         self.start_timer()
         k_value_array = np.arange(self.config.k_range[0],self.config.k_range[1]+self.config.kstep, self.config.kstep).tolist()
-        # c_value_array = np.arange(self.config.c_range[0],self.config.c_range[1]+self.config.cstep, self.config.cstep).tolist()
-        permutations = len(k_value_array)**(self.DOF-1)#*len(c_value_array)**(self.DOF-1)
+        c_value_array = np.arange(self.config.c_range[0],self.config.c_range[1]+self.config.cstep, self.config.cstep).tolist()
+        if fix_c:
+            permutations = len(k_value_array)**(self.DOF-1)#*len(c_value_array)**(self.DOF-1)
+        if fix_k:
+            permutations = len(c_value_array)**(self.DOF-1)
+        else:
+            permutations = len(k_value_array)**(self.DOF-1)*len(c_value_array)**(self.DOF-1)
         print(f"Number of permutations: {permutations}")
 
-        for k_values in product(k_value_array, repeat=self.DOF-1):
-            forcing_fq = self.FQ_HZ
-            if forcing_fq == 0:
-                forcing_fq = None
-            # for c_values in product(c_value_array, repeat=self.DOF-1):
-            self.k_array[1:] = k_values
-                # self.c_array[1:] = c_values
-            system = MassSpringDamper(DOF=self.DOF,masses=self.m_array,springs=self.k_array,dampers=self.c_array,forces=self.F_array, frequency_hz=forcing_fq)
+        def _run_system(force_fq):
+            system = MassSpringDamper(DOF=self.DOF,masses=self.m_array,springs=self.k_array,dampers=self.c_array,forces=self.F_array, frequency_hz=force_fq)
             sample = self.run_MSDS_configuration(system)
             self.push_data_sample(sample)
+
+        if fix_k:
+            for k_values in product(k_value_array, repeat=self.DOF-1):
+                forcing_fq = self.FQ_HZ
+                if forcing_fq == 0:
+                    forcing_fq = None
+                self.k_array[1:] = k_values
+                _run_system(forcing_fq)
+        elif fix_c:
+            for c_values in product(c_value_array, repeat=self.DOF-1):
+                forcing_fq = self.FQ_HZ
+                if forcing_fq == 0:
+                    forcing_fq = None
+                self.c_array[1:] = c_values
+                _run_system(forcing_fq)
+        else:
+            for k_values in product(k_value_array, repeat=self.DOF-1):
+                for c_values in product(c_value_array, repeat=self.DOF-1):
+                    forcing_fq = self.FQ_HZ
+                    if forcing_fq == 0:
+                        forcing_fq = None
+                    self.k_array[1:] = k_values
+                    self.c_array[1:] = c_values
+                    _run_system(forcing_fq)
 
         self.save_data()
         print(rf"Total Time: {self.time_taken:.2f} s, Time per permutation: {(self.time_taken)/permutations * 1e6:.2f} micro s")
