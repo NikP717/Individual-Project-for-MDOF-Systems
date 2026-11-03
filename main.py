@@ -27,14 +27,14 @@ def run_config_and_method(name, dof, k_range, k_step, c_range, c_step, fix_k=Fal
 
 
 def main():
-    method = MethodAttr(name="2DOF_FIXC_1",dof=2,k_range=[1,100000],k_step=0.1,c_range=None,c_step=None,fix_k=False,fix_c=True)
+    # method = MethodAttr(name="2DOF_FIXC_1",dof=2,k_range=[1,100000],k_step=0.1,c_range=None,c_step=None,fix_k=False,fix_c=True)
+    # run_config_and_method(*method.unwrap_attr())
+    # method = MethodAttr(name="2DOF_FIXK_1",dof=2,k_range=None,k_step=None,c_range=[0.01,5],c_step=0.001,fix_k=True,fix_c=False)
+    # run_config_and_method(*method.unwrap_attr())
+    method = MethodAttr(name='2DOF_2', dof = 2, k_range = [1, 1000], k_step=1, c_range = [0.01, 10], c_step=0.01, fix_k=False,fix_c=False)
     run_config_and_method(*method.unwrap_attr())
-    method = MethodAttr(name="2DOF_FIXK_1",dof=2,k_range=None,k_step=None,c_range=[0.01,5],c_step=0.001,fix_k=True,fix_c=False)
-    run_config_and_method(*method.unwrap_attr())
-    method = MethodAttr(name='2DOF_1', dof = 2, k_range = [1, 100000], k_step=10, c_range = [0.01, 5], c_step=0.01, fix_k=False,fix_c=False)
-    run_config_and_method(*method.unwrap_attr())
-    method = MethodAttr(name='3DOF_1', dof = 3, k_range = [1, 10000], k_step=100, c_range = [0.01, 5], c_step=0.1, fix_k=False,fix_c=False)
-    run_config_and_method(*method.unwrap_attr())
+    # method = MethodAttr(name='3DOF_1', dof = 3, k_range = [1, 10000], k_step=100, c_range = [0.01, 5], c_step=0.1, fix_k=False,fix_c=False)
+    # run_config_and_method(*method.unwrap_attr())
     # do large data sweeps for 2,3,4 DOF systems repeatedly with new plotting systems and see what data we can draw
     # Once done add an optimisiation inverse design stream by adding anew code 
 

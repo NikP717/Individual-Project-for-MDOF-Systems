@@ -15,38 +15,102 @@ from models.AnalysisTools import PlotAttributes, DataPlotter, DataAnalyser
 # plotter = DataPlotter(DOF, df)
 # plotter.plot_data(attr)
 
-# NAME =  "2DOF_1"
-# DOF = 2
-# df = DataAnalyser.open_data(NAME)
+NAME =  "2DOF_2"
+DOF = 2
+df = DataAnalyser.open_data(NAME)
 
-# df['KE_diff'] = (df['RMS_KE_J_2'] - df['RMS_KE_J_1'])
-# print(df)
+df['KE_diff'] = (df['RMS_KE_J_2'] - df['RMS_KE_J_1'])
+print(df)
+attr = PlotAttributes(data_name=NAME,
+                      plot_name="2D_contourplot_2DOF",
+                      x_axis='K_Nm_2',
+                      y_axis='C_Nsm_2',
+                      z_axis='KE_diff', 
+                      plot_title=None,
+                      xlabel='K_2', 
+                      ylabel='C_2',
+                      contour_label='KE2-KE1')
+plotter = DataPlotter(DOF, df)
+plotter.plot_data(attr)
+
+# NAME =  "3DOF_1"
+# DOF = 3
+# df = DataAnalyser.open_data(NAME)
+# df['KE_diff'] = (df['RMS_KE_J_3']/(df['RMS_KE_J_1']+df['RMS_KE_J_2']+df['RMS_KE_J_3']))
 # attr = PlotAttributes(data_name=NAME,
-#                       plot_name="2D_contourplot",
-#                       x_axis='K_Nm_2',
-#                       y_axis='C_Nsm_2',
+#                       plot_name="2D_contourplot_fixC_051",
+#                       x_axis='K_Nm_3',
+#                       y_axis='C_Nsm_3',
 #                       z_axis='KE_diff', 
 #                       plot_title=None,
-#                       xlabel='K_2', 
-#                       ylabel='C_2',
-#                       contour_label='KE2-KE1')
+#                       xlabel='K_3', 
+#                       ylabel='C_3',
+#                       contour_label='KE3/KE_tot',
+#                       fixed_vals={'K_Nm_2':101,'C_Nsm_2':.51})
 # plotter = DataPlotter(DOF, df)
 # plotter.plot_data(attr)
 
-NAME =  "3DOF_1"
-DOF = 3
-df = DataAnalyser.open_data(NAME, columns=['RMS_KE_J_1','RMS_KE_J_3','K_Nm_3','C_Nsm_3'])
-print("a")
-df['KE_diff'] = (df['RMS_KE_J_3'] - df['RMS_KE_J_1'])
-attr = PlotAttributes(data_name=NAME,
-                      plot_name="2D_contourplot",
-                      x_axis='K_Nm_3',
-                      y_axis='C_Nsm_3',
-                      z_axis='KE_diff', 
-                      plot_title=None,
-                      xlabel='K_3', 
-                      ylabel='C_3',
-                      contour_label='KE3-KE1')
-plotter = DataPlotter(DOF, df)
-print("a")
-plotter.plot_data(attr)
+# attr = PlotAttributes(data_name=NAME,
+#                       plot_name="2D_contourplot_ke1_fixC_051", 
+#                       x_axis='K_Nm_3', 
+#                       y_axis='C_Nsm_3', 
+#                       z_axis='RMS_KE_J_1', 
+#                       plot_title=None, 
+#                       xlabel='K_3', 
+#                       ylabel='C_3', 
+#                       contour_label='KE1', 
+#                       fixed_vals={'K_Nm_2':101,'C_Nsm_2':.51})
+# plotter = DataPlotter(DOF, df)
+# plotter.plot_data(attr)
+
+# attr = PlotAttributes(data_name=NAME,
+#                       plot_name="2D_contourplot_stiffnesses_fixC_051", 
+#                       x_axis='K_Nm_3', 
+#                       y_axis='K_Nm_2', 
+#                       z_axis='RMS_KE_J_3', 
+#                       plot_title=None, 
+#                       xlabel='K_3', 
+#                       ylabel='K_2', 
+#                       contour_label='KE3', 
+#                       fixed_vals={'C_Nsm_2':.51,'C_Nsm_3':.51})
+# plotter = DataPlotter(DOF, df)
+# plotter.plot_data(attr)
+
+# attr = PlotAttributes(data_name=NAME,
+#                       plot_name="2D_contourplot_stiffnesses_fixC_091", 
+#                       x_axis='K_Nm_3', 
+#                       y_axis='K_Nm_2', 
+#                       z_axis='RMS_KE_J_3', 
+#                       plot_title=None, 
+#                       xlabel='K_3', 
+#                       ylabel='K_2', 
+#                       contour_label='KE3', 
+#                       fixed_vals={'C_Nsm_2':.91,'C_Nsm_3':.91})
+# plotter = DataPlotter(DOF, df)
+# plotter.plot_data(attr)
+
+# attr = PlotAttributes(data_name=NAME,
+#                       plot_name="2D_contourplot_damping_fixK_1001", 
+#                       x_axis='C_Nsm_3', 
+#                       y_axis='C_Nsm_2', 
+#                       z_axis='RMS_KE_J_3', 
+#                       plot_title=None, 
+#                       xlabel='C_3', 
+#                       ylabel='C_2', 
+#                       contour_label='KE3', 
+#                       fixed_vals={'K_Nm_2':1001,'K_Nm_3':1001})
+# plotter = DataPlotter(DOF, df)
+
+# plotter.plot_data(attr)
+# attr = PlotAttributes(data_name=NAME,
+#                       plot_name="2D_relKE_contourplot_damping_fixK_1001", 
+#                       x_axis='C_Nsm_3', 
+#                       y_axis='C_Nsm_2', 
+#                       z_axis='KE_diff', 
+#                       plot_title=None, 
+#                       xlabel='C_3', 
+#                       ylabel='C_2', 
+#                       contour_label='KE3/K_tot', 
+#                       fixed_vals={'K_Nm_2':1001,'K_Nm_3':1001})
+# plotter = DataPlotter(DOF, df)
+# plotter.plot_data(attr)

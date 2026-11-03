@@ -15,6 +15,7 @@ class PlotAttributes():
     x_axis: str
     y_axis: str
     z_axis: str
+    fixed_vals: dict = None
     plot_title: str = None
     xlabel: str = None
     ylabel: str = None
@@ -34,10 +35,13 @@ class DataPlotter():
 
     def _contour_plot(self, attr: PlotAttributes):
         df = self.df
+        if attr.fixed_vals:
+            for column, value in attr.fixed_vals.items():
+                df = df[df[column] == value]                    
         Z = df.pivot(index=attr.y_axis,columns=attr.x_axis,values=attr.z_axis).sort_index().sort_index(axis=1)
-
+        levels = np.linspace(Z.to_numpy().min(), Z.to_numpy().max(), 100)
         fig, ax = plt.subplots(figsize=(10, 7))
-        contour = ax.contourf(Z.columns.to_numpy(),Z.index.to_numpy(),Z.to_numpy(),levels=100,cmap="viridis")
+        contour = ax.contourf(Z.columns.to_numpy(),Z.index.to_numpy(),Z.to_numpy(),levels=levels,cmap="viridis")
         fig.colorbar(contour, ax=ax, label=attr.contour_label)
 
         ax.set_xlabel(attr.xlabel)
@@ -67,22 +71,6 @@ class DataPlotter():
         dir =  Path(__file__).resolve().parent.parent / "DATA" / attr.data_name
         filepath = dir / f"{attr.plot_name}.png"
         fig.savefig(filepath)
-
-    # plot_smooth_contour(
-    #     df,
-    #     'K_Nm_3', 'K_Nm_2', 'RMS_KE_J_3',
-    #     'Spring stiffness 3 (N/m)',
-    #     'Spring stiffness 2 (N/m)',
-    #     "Spring_stiffness_design_space"
-    # )
-
-    # plot_smooth_contour(
-    #     df,
-    #     'C_Nsm_3', 'C_Nsm_2', 'RMS_KE_J_3',
-    #     'Damping coefficient 3 (Ns/m)',
-    #     'Damping coefficient 2 (Ns/m)',
-    #     "Damping_design_space"
-    # )
 
 class DataAnalyser():
     @classmethod

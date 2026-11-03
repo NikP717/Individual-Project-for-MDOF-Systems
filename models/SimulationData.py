@@ -54,18 +54,7 @@ class Dataset():
         data_dir = project_dir / "DATA" / name
         if columns is None:
             return pl.scan_parquet(str(data_dir / "*.parquet")).collect().to_pandas()
-        a = pl.scan_parquet(str(data_dir / "*.parquet"))
-        print("scan done")
-        print(f"{time.perf_counter()-time_0:.2f} s")
-        a=a.select(columns)
-        print("columns done")
-        print(f"{time.perf_counter()-time_0:.2f} s")
-        a= a.collect()
-        print("collection done (lazyframe)")
-        print(f"{time.perf_counter()-time_0:.2f} s")
-        a=a.to_pandas()
-        print("pandas conversion done")
-        print(f"{time.perf_counter()-time_0:.2f} s")
+        return pl.scan_parquet(str(data_dir / "*.parquet")).select(columns).collect().to_pandas()
 
     @classmethod
     def dataset_to_excel(cls, name: str, dataset: pd.DataFrame) -> None:
