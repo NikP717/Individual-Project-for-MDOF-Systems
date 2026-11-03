@@ -5,6 +5,7 @@ build/
 dist/
 wheels/
 *.egg-info
-
+DATA/*
+!DATA/.gitkeep
 # Virtual environments
 .venv
