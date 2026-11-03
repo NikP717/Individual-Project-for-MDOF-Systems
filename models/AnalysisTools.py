@@ -20,6 +20,7 @@ class PlotAttributes():
     xlabel: str = None
     ylabel: str = None
     contour_label: str = None
+    logarithmic_scale: bool = False
 
 class DataPlotter():
     def __init__(self, DOF: float, df: pd.DataFrame):
@@ -39,7 +40,8 @@ class DataPlotter():
             for column, value in attr.fixed_vals.items():
                 df = df[df[column] == value]                    
         Z = df.pivot(index=attr.y_axis,columns=attr.x_axis,values=attr.z_axis).sort_index().sort_index(axis=1)
-        levels = np.linspace(Z.to_numpy().min(), Z.to_numpy().max(), 100)
+        z = Z.to_numpy()
+        levels = np.linspace(np.nanquantile(z, 0.0001),np.nanquantile(z, 0.9999),150)
         fig, ax = plt.subplots(figsize=(10, 7))
         contour = ax.contourf(Z.columns.to_numpy(),Z.index.to_numpy(),Z.to_numpy(),levels=levels,cmap="viridis")
         fig.colorbar(contour, ax=ax, label=attr.contour_label)
@@ -48,6 +50,9 @@ class DataPlotter():
         ax.set_ylabel(attr.ylabel)
         ax.set_title(attr.plot_name)
         fig.tight_layout()
+        if attr.logarithmic_scale:
+            ax.set_xscale("log")
+            ax.set_yscale("log")    
         self._save_plot(fig, attr)
 
     def _2d_plot(self, attr: PlotAttributes):
@@ -64,7 +69,8 @@ class DataPlotter():
         ax.grid()
         ax.plot(x, y, 'k-')
         fig.tight_layout()
-
+        if attr.logarithmic_scale:
+            ax.set_xscale("log")
         self._save_plot(fig, attr)
 
     def _save_plot(self, fig: plt.figure, attr: PlotAttributes):

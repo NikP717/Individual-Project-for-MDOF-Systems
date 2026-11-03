@@ -159,7 +159,6 @@ class MassSpringDamperSystem():
         self.velocity_matrix = V           
 
 
-
 # MSDS = MassSpringDamperSystem(MassSpringDamper(DOF=3,masses=[1,1,1],springs=[500,100,200],dampers=[0.5,0.1,0.1],forces=[1,0,0]))
 # displacement, velocity, time = MSDS.calculate_dynamic_system([100,120])
 
