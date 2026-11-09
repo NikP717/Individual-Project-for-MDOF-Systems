@@ -6,11 +6,15 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "fastparquet>=2026.9.0",
+    "ipykernel>=6.31.0",
+    "jupyter-client>=8.10.0",
     "matplotlib>=3.11.2",
     "numpy>=2.5.4",
     "openpyxl>=3.1.5",
     "pandas>=3.0.6",
     "polars>=2.1.0",
     "pyarrow>=26.0.0",
+    "pyzmq>=27.3.0",
     "scipy>=1.18.1",
+    "spyder-kernels==3.1.4",
 ]

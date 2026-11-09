@@ -1,6 +1,8 @@
 import numpy as np
 from dataclasses import dataclass
 from scipy.integrate import solve_ivp
+from scipy.linalg import eigh
+
 
 @dataclass
 class MassSpringDamper():
@@ -37,7 +39,7 @@ class MassSpringDamperSystem():
         if self.MSD.frequency_hz:
             self.fq_HZ = self.MSD.frequency_hz
         else:
-            self.fq_HZ = self._calculate_undamped_natural_fq()
+            self.fq_HZ = self.calculate_undamped_natural_fq()
         # print(self.fq_HZ)
 
         # solution matrices
@@ -46,34 +48,20 @@ class MassSpringDamperSystem():
 
         # solution mass array
         self.mass_states = []
-        self.KE = [] # or samplerow shortcut
+        self.KE = [] # for samplerow shortcut
+        self.X = [] # for samplerow shortcut
 
     def calculate_SS_system(self, display = False):
         self._calculate_impedance_matrix()
         self._calculate_velocity_matrix()
-        # self._set_mass_states()
-        # if display:
-        #     self._display_results()
+
         velocity_complex = self.velocity_matrix
         velocity_peaks = np.abs(velocity_complex)
         rms_KE = 1/4 * np.array(self.MSD.masses) * velocity_peaks**2
         self.KE = rms_KE.tolist()
-
-#           def peak_velocity(self):
-# #         return abs(self.velocity_complex)
-
-#     @property
-#     def rms_kinetic_energy(self):
-#         return (1/4 * self.mass * self.peak_velocity**2)
-    #         current_mass = MassProperty(
-    #             number = i+1,
-    #             mass = self.MSD.masses[i],
-    #             velocity_complex = self.velocity_matrix[i,0],
-    #             forced_fq = self.fq_HZ
-    #         )
-    #         self.mass_states.append(current_mass)
-    #         KE.append(float(current_mass.rms_kinetic_energy))
-    #     self.KE = KE
+        X = (velocity_complex/(2*self.fq_HZ*np.pi*1j))
+        self.X_real = X.real.tolist()
+        self.X_imag = X.imag.tolist()
 
     def calculate_dynamic_system(self, t_range):
         """
@@ -139,9 +127,15 @@ class MassSpringDamperSystem():
     def _set_forces(self, force_array: list) -> None:
         self.force_matrix = np.array(force_array)
 
-    def _calculate_undamped_natural_fq(self):
+    def calculate_undamped_natural_fq(self):
         """Calculates uncoupled frequency of first mass as connection stays constant"""
         return np.sqrt(float(self.MSD.springs[0])/float(self.MSD.masses[0])) / (2*np.pi)
+
+    def calculate_coupled_natural_fq(self):
+        """Undamped coupled natural frequencies (Hz) and mode shapes."""
+        eigvals, modes = eigh(self.spring_matrix, self.mass_matrix)  # K v = w^2 M v
+        omega = np.sqrt(eigvals)          # rad/s, ascending
+        return omega / (2 * np.pi)
 
     def _calculate_impedance_matrix(self):
         fq_RAD = self.fq_HZ *2*np.pi
@@ -157,57 +151,3 @@ class MassSpringDamperSystem():
         F = self.force_matrix
         V = np.linalg.solve(Z, F)
         self.velocity_matrix = V           
-
-
-# MSDS = MassSpringDamperSystem(MassSpringDamper(DOF=3,masses=[1,1,1],springs=[500,100,200],dampers=[0.5,0.1,0.1],forces=[1,0,0]))
-# displacement, velocity, time = MSDS.calculate_dynamic_system([100,120])
-
-# from matplotlib import pyplot as plt
-# plt.plot(time, displacement[0, :]*1000,label="Mass 1")
-# plt.plot(time, displacement[1, :]*1000,label="Mass 2")
-# plt.plot(time, displacement[2, :]*1000,label="Mass 3")
-# plt.xlabel("Time (s)")
-# plt.ylabel("Displacement (mm)")
-# plt.show()
-
-
-# @dataclass
-# class MassProperty():
-#     number: int # 1,2,3,4,...N mass
-#     mass: float # kg
-#     velocity_complex: complex # COMPLEX VELOCITY VALUE
-#     forced_fq: float # Hz FORCING FREQUENCY 
-
-#     @property
-#     def peak_velocity(self):
-#         return abs(self.velocity_complex)
-
-#     @property
-#     def rms_kinetic_energy(self):
-#         return (1/4 * self.mass * self.peak_velocity**2)
-
-#     def display_state(self):
-#         print(
-#         f"""---------------------------------
-#         Mass {self.number}: {self.mass} kg
-#         Average KE: {self.rms_kinetic_energy:.2f} J 
-#         Steady State Peak Velocity: {self.peak_velocity:.2f} m/s""")
-
-
-    # def _set_mass_states(self):
-    #     KE = []
-    #     for i in range(0, self.dof):
-    #         current_mass = MassProperty(
-    #             number = i+1,
-    #             mass = self.MSD.masses[i],
-    #             velocity_complex = self.velocity_matrix[i,0],
-    #             forced_fq = self.fq_HZ
-    #         )
-    #         self.mass_states.append(current_mass)
-    #         KE.append(float(current_mass.rms_kinetic_energy))
-    #     self.KE = KE
-
-    
-    # def _display_results(self):
-    #     for mass in self.mass_states:
-    #         mass.display_state()

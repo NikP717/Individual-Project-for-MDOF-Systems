@@ -55,7 +55,7 @@ class BaseMethod(ABC):
     def run_MSDS_configuration(self, MSD: MassSpringDamper) -> DataSample:
         current_config = MassSpringDamperSystem(MSD)
         current_config.calculate_SS_system(display=False)
-        data_row = DataSample(MSD.masses, MSD.dampers, MSD.springs, current_config.KE)
+        data_row = DataSample(MSD.masses, MSD.dampers, MSD.springs, current_config.KE, current_config.X_real, current_config.X_imag)
         if self.FQ_HZ == 0:
             self.FQ_HZ = current_config.fq_HZ
         return data_row

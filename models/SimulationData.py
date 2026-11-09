@@ -2,11 +2,10 @@
 from dataclasses import dataclass
 import pandas as pd
 from pathlib import Path
-import pyarrow.parquet as pq
 import polars as pl
 import time
 
-PARAMETERS = ["M_kg", "C_Nsm", "K_Nm", "RMS_KE_J"]
+PARAMETERS = ["M_kg", "C_Nsm", "K_Nm", "RMS_KE_J","X_real_m","X_imag_m"]
 
 @dataclass
 class DataSample():
@@ -14,6 +13,8 @@ class DataSample():
     damping_array: list
     spring_array: list
     rms_kinetic_energy_array: list
+    real_displacement_array: list
+    imag_displacement_array: list
 
     def __post_init__(self):
         # prevent modifying from indirect external effects
@@ -22,7 +23,7 @@ class DataSample():
         self.spring_array = self.spring_array.copy()
 
     def to_row(self):
-        return self.mass_array + self.damping_array + self.spring_array + self.rms_kinetic_energy_array
+        return self.mass_array + self.damping_array + self.spring_array + self.rms_kinetic_energy_array + self.real_displacement_array + self.imag_displacement_array
 
 class Dataset():
     def __init__(self, batch_name: str):
