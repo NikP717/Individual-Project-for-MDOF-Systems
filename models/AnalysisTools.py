@@ -157,31 +157,29 @@ class DataAnalyser():
         data["R_real"] = data[f"X_real_m_{dof}"] / force
         data["R_imag"] = data[f"X_imag_m_{dof}"] / force
 
-        c_cmap, k_cmap = plt.cm.viridis, plt.cm.plasma
-        c_norm = Normalize(data[c_col].min(), data[c_col].max())
-        k_norm = Normalize(data[k_col].min(), data[k_col].max())
-
         fig, ax = plt.subplots()
 
         # Lines of constant C (K varies along each line)
         for c, g in data.groupby(c_col):
             g = g.sort_values(k_col)
-            ax.plot(g["R_real"], g["R_imag"], "-", lw=1, color=c_cmap(c_norm(c)))
+            ax.plot(g["R_real"], g["R_imag"], "-", lw=0.8, color="black")
 
         # Lines of constant K (C varies along each line)
         for k, g in data.groupby(k_col):
             g = g.sort_values(c_col)
-            ax.plot(g["R_real"], g["R_imag"], "--", lw=1, color=k_cmap(k_norm(k)))
+            ax.plot(g["R_real"], g["R_imag"], "--", lw=0.8, color="red")
 
-        fig.colorbar(ScalarMappable(norm=c_norm, cmap=c_cmap), ax=ax,
-                     label=f"{cls._column_to_label_translator(c_col)} (solid lines)", pad=0.02)
-        fig.colorbar(ScalarMappable(norm=k_norm, cmap=k_cmap), ax=ax,
-                     label=f"{cls._column_to_label_translator(k_col)} (dashed lines)", pad=0.06)
+        # Proxy artists so the legend distinguishes the two families
+        ax.plot([], [], "-", color="black", label=f"Constant {cls._column_to_label_translator(c_col)}")
+        ax.plot([], [], "--", color="red", label=f"Constant {cls._column_to_label_translator(k_col)}")
+        ax.legend()
+
         ax.set_aspect("equal")
-        ax.set_xlabel("Re(R)")
-        ax.set_ylabel("Im(R)")
-        plot_name = "Receptance"
-        dir =  Path(__file__).resolve().parent.parent / "DATA" / data_name
+        ax.set_xlabel("Re(R) (Where F1=1N)")
+        ax.set_ylabel("Im(R) (Where F1=1N)")
+        ax.set_title("Receptance for 2DOF System: F1 = 1N, M1&2 = 1kg, K1 = 100N/m , C1 = 1 Ns/m")
+        plot_name = "Receptance Plot with varied K2 and C2 for 2DOF System"
+        dir = Path(__file__).resolve().parent.parent / "DATA" / data_name
         filepath = dir / f"{plot_name}.png"
         fig.savefig(filepath)
 
