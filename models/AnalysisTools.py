@@ -11,6 +11,7 @@ import re
 import textwrap
 from matplotlib.lines import Line2D
 import matplotlib.patheffects as pe
+import matplotlib.colors as mcolors
 
 @dataclass
 class PlotAttributes():
@@ -136,6 +137,7 @@ class DataAnalyser():
     
     @classmethod
     def generate_receptance_plot(cls, data, data_name, masses: list[int] | None = None) -> None:
+        data = data.copy()
         dof = max(int(m.group(1)) for col in data.columns if (m := re.fullmatch(r"X_real_m_(\d+)", col)))
         force = 1  # NOTE: HARD CODED VALUE
         spring_norm_factor = data.iloc[0]["K_Nm_1"]
@@ -213,7 +215,12 @@ class DataAnalyser():
                 Line2D([], [], ls="--", color=k_colour, lw=1.5, label=f"Constant {cls._column_to_label_translator(k_col)}"),
             ]
             ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.14), ncol=2, frameon=False)
-        title = f"Receptance for {dof}DOF System: F1 = 1N, M1&2 = 1kg, K1 = 100N/m, C1 = 1 Ns/m"
+            
+        title = f"Receptance for {dof}DOF System: " + ", ".join(
+                    [f"M{i} = {data.iloc[0][f'M_kg_{i}']:.3g}kg" for i in range(1, dof + 1)] +
+                    [f"K1 = {spring_norm_factor:.3g} N/m",
+                    f"C1 = {damp_norm_factor:.3g} Ns/m"]
+                )
         wrap_width = max(30, int(fig.get_figwidth() * 9))
         fig.suptitle("\n".join(textwrap.wrap(title, width=wrap_width)), fontsize=13, fontweight="bold")
         mass_tag = "_".join(str(m) for m in masses)
@@ -236,12 +243,11 @@ class DataAnalyser():
     param_prefixes = ("K_Nm", "C_Nsm") 
 
     @classmethod
-    def generate_permutation_plots(cls, data, data_name) -> None:
+    def generate_permutation_plots(cls, data, data_name, max_per_fig: int = 9, ncols: int = 3) -> None:
         data = data.copy()
         dof = max(int(m.group(1)) for col in data.columns if (m := re.fullmatch(r"X_real_m_(\d+)", col)))
         spring_norm_factor = data.iloc[0]["K_Nm_1"]
         damp_norm_factor = data.iloc[0]["C_Nsm_1"]
-        # Normalise columns
         norm_k_cols = [c for c in data.columns if c.startswith("K_Nm")]
         norm_c_cols = [c for c in data.columns if c.startswith("C_Nsm")]
         data[norm_k_cols] = data[norm_k_cols] / spring_norm_factor
@@ -253,23 +259,27 @@ class DataAnalyser():
         fixed_param_prefixes = ("M_kg", "K_Nm", "C_Nsm")
         z = f"RMS_KE_J_{dof}"
         out_dir = Path(__file__).resolve().parent.parent / "DATA" / data_name
-        # Iso-lines as fractions of each slice's own peak: labelled major lines plus unlabelled minor lines, packed towards the peak
+
+        # ---- Colour system: set these to match the old plotter ----
+        CMAP = "rainbow"
+        LOG_COLOUR = True          # old call used logarithmic_scale=True
+        N_CBAR_TICKS = 5           # fewer ticks = easier to read
+        # -----------------------------------------------------------
         major_fracs = [0.25, 0.5, 0.75, 0.9, 0.95, 0.99]
         minor_fracs = [0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.85, 0.925, 0.96, 0.97, 0.98, 0.985, 0.995, 0.998]
         line_colour = "black"
-        minor_lw, minor_alpha = 0.7, 0.5
-        major_lw, major_alpha = 0.9, 0.8
+        minor_lw, minor_alpha = 0.5, 0.5
+        major_lw, major_alpha = 0.7, 0.8
 
         def use_log(v):
-            # Log axis whenever the sweep is positive and spans a decade or more
             v = np.asarray(v, dtype=float)
             return v.min() > 0 and v.max() / v.min() >= 10
 
-        # Pass 1: build every slice so one colour scale can span the whole parameter space
+        # Pass 1: build every slice
         slices = []
         for x, y in column_permutations:
             fixed_vals = {k: v for k, v in fixed_data_slice.items()
-                          if k.startswith(fixed_param_prefixes) and k not in (x, y)}
+                        if k.startswith(fixed_param_prefixes) and k not in (x, y)}
             mask = np.ones(len(data), dtype=bool)
             for k, v in fixed_vals.items():
                 mask &= np.isclose(data[k], v)
@@ -279,73 +289,99 @@ class DataAnalyser():
             slices.append((x, y, fixed_vals, grid))
         if not slices:
             return
-        all_z = np.concatenate([g.to_numpy(dtype=float).ravel() for *_, g in slices])
-        all_z = all_z[np.isfinite(all_z)]
-        z_min, z_max = all_z.min(), all_z.max()
-        # One linear scale shared by every figure, so a colour means the same value everywhere
-        levels = np.linspace(z_min, z_max, 256)
-        ticks = np.linspace(z_min, z_max, 10)
-        # Pass 2: plot
-        for x, y, fixed_vals, grid in slices:
-            X, Y = np.meshgrid(grid.columns.to_numpy(dtype=float), grid.index.to_numpy(dtype=float))
-            Z = grid.to_numpy(dtype=float)
-            fig, ax = plt.subplots(figsize=(10, 7), layout="constrained")
-            cf = ax.contourf(X, Y, Z, levels=levels, cmap="rainbow", vmin=z_min, vmax=z_max)
-            cbar = fig.colorbar(cf, ax=ax, pad=0.02, ticks=ticks)
-            cbar.ax.yaxis.set_major_formatter(plt.FormatStrFormatter("%.2e"))
-            cbar.set_label(cls._column_to_label_translator(z))
-            z_peak = np.nanmax(Z)
-            z_lo = np.nanmin(Z)
-            minor = [f for f in minor_fracs if f * z_peak > z_lo]
-            major = [f for f in major_fracs if f * z_peak > z_lo]
-            if minor:
-                ax.contour(X, Y, Z, levels=[f * z_peak for f in minor], colors=line_colour, linewidths=minor_lw, alpha=minor_alpha)
-            if major:
-                cs = ax.contour(X, Y, Z, levels=[f * z_peak for f in major], colors=line_colour, linewidths=major_lw, alpha=major_alpha)
-                ax.clabel(cs, fmt={f * z_peak: f"{f:.1%}".replace(".0%", "%") for f in major},
-                          fontsize=7, colors=line_colour, inline=True, inline_spacing=6)
-            # Legend entries (proxy artists, so the legend matches the line styles exactly)
-            handles = [
-                Line2D([], [], color=line_colour, lw=major_lw, alpha=major_alpha, label="Labelled contours (% of max on this plot)"),
-                Line2D([], [], color=line_colour, lw=minor_lw, alpha=minor_alpha, label="Intermediate contours"),
-            ]
-            ax.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=2, frameon=False, fontsize=8)
-            if use_log(X[0]):
-                ax.set_xscale("log")
-            if use_log(Y[:, 0]):
-                ax.set_yscale("log")
-            ax.set_xlim(X.min(), X.max())
-            ax.set_ylim(Y.min(), Y.max())
-            ax.grid(True, alpha=0.2, linestyle=":", which="both")
-            ax.set_xlabel(cls._column_to_label_translator(x))
-            ax.set_ylabel(cls._column_to_label_translator(y))
-            # Group equal masses, e.g. {1.0: [1, 2]} -> "M1&2 = 1kg"
-            mass_groups = {}
-            for k, v in fixed_vals.items():
-                if k.startswith("M_kg"):
-                    mass_groups.setdefault(v, []).append(k.split("_")[-1])
-            mass_txt = ", ".join(f"M{'&'.join(ids)} = {v:.3g}kg" for v, ids in mass_groups.items())
-            # Fixed ratios of the other springs and dampers (K_n/K_1, C_n/C_1); the 1 entries are the dimensional base values
-            ratio_txt = ", ".join(
-                f"{k.split('_')[0]}{k.split('_')[-1]}/{k.split('_')[0]}1 = {v:.3g}"
-                for k, v in fixed_vals.items()
-                if k.startswith(("K_Nm", "C_Nsm")) and not k.endswith("_1")
-            )
-            base_txt = f"K1 = {spring_norm_factor:.3g} N/m, C1 = {damp_norm_factor:.3g} Ns/m"
-            line1 = f"{cls._column_to_label_translator(z)} for {dof}DOF System: {mass_txt}, {base_txt}"
-            line2 = f"Swept: {cls._column_to_label_translator(x)} vs {cls._column_to_label_translator(y)}"
-            if ratio_txt:
-                line2 += f"   |   Held at: {ratio_txt}"
-            wrap_width = max(40, int(fig.get_figwidth() * 11))
-            fig.suptitle("\n".join(textwrap.wrap(line1, wrap_width) + textwrap.wrap(line2, wrap_width)),
-                         fontsize=12, fontweight="bold")
-            
-            plot_name = f"2D_Contour_X{x}_Y{y}_Z{z}"
-            fig.savefig(out_dir / f"{plot_name}.png", dpi=200)
+
+        # Figure-level title info (identical for every slice)
+        mass_groups = {}
+        for k, v in slices[0][2].items():
+            if k.startswith("M_kg"):
+                mass_groups.setdefault(v, []).append(k.split("_")[-1])
+        mass_txt = ", ".join(f"M{'&'.join(ids)} = {v:.3g}kg" for v, ids in mass_groups.items())
+        base_txt = f"K1 = {spring_norm_factor:.3g} N/m, C1 = {damp_norm_factor:.3g} Ns/m"
+        suptitle = f"{cls._column_to_label_translator(z)} for {dof}DOF System: {mass_txt}, {base_txt}"
+
+        legend_handles = [
+            Line2D([], [], color=line_colour, lw=major_lw, alpha=major_alpha,
+                label="Labelled contours (% of max on each subplot)"),
+            Line2D([], [], color=line_colour, lw=minor_lw, alpha=minor_alpha, label="Intermediate contours"),
+        ]
+
+        # Pass 2: plot in pages of up to max_per_fig subplots
+        out_dir.mkdir(parents=True, exist_ok=True)
+        pages = [slices[i:i + max_per_fig] for i in range(0, len(slices), max_per_fig)]
+        for p, page in enumerate(pages, start=1):
+            n = len(page)
+            cols = min(ncols, n)
+            rows = int(np.ceil(n / cols))
+            fig, axes = plt.subplots(rows, cols, figsize=(5.6 * cols, 4.4 * rows),
+                                    layout="constrained", squeeze=False)
+            flat = axes.ravel()
+            for i, (ax, (x, y, fixed_vals, grid)) in enumerate(zip(flat, page)):
+                X, Y = np.meshgrid(grid.columns.to_numpy(dtype=float), grid.index.to_numpy(dtype=float))
+                Z = grid.to_numpy(dtype=float)
+                z_lo, z_hi = np.nanmin(Z), np.nanmax(Z)
+
+                # Per-subplot colour scale
+                if LOG_COLOUR and z_lo > 0:
+                    norm = mcolors.LogNorm(vmin=z_lo, vmax=z_hi)
+                    levels = np.geomspace(z_lo, z_hi, 256)
+                    ticks = np.geomspace(z_lo, z_hi, N_CBAR_TICKS)
+                else:
+                    norm = mcolors.Normalize(vmin=z_lo, vmax=z_hi)
+                    levels = np.linspace(z_lo, z_hi, 256)
+                    ticks = np.linspace(z_lo, z_hi, N_CBAR_TICKS)
+
+                cf = ax.contourf(X, Y, Z, levels=levels, cmap=CMAP, norm=norm)
+
+                minor = [f for f in minor_fracs if f * z_hi > z_lo]
+                major = [f for f in major_fracs if f * z_hi > z_lo]
+                if minor:
+                    ax.contour(X, Y, Z, levels=[f * z_hi for f in minor], colors=line_colour,
+                            linewidths=minor_lw, alpha=minor_alpha)
+                if major:
+                    cs = ax.contour(X, Y, Z, levels=[f * z_hi for f in major], colors=line_colour,
+                                    linewidths=major_lw, alpha=major_alpha)
+                    ax.clabel(cs, fmt={f * z_hi: f"{f:.1%}".replace(".0%", "%") for f in major},
+                            fontsize=6, colors=line_colour, inline=True, inline_spacing=4)
+
+                # Own colourbar: tall, thin, few ticks, larger text
+                cbar = fig.colorbar(cf, ax=ax, pad=0.02, fraction=0.05, aspect=25, ticks=ticks)
+                cbar.ax.yaxis.set_major_formatter(plt.FormatStrFormatter("%.2e"))
+                cbar.minorticks_off()
+                cbar.ax.tick_params(labelsize=8, length=4)
+                cbar.set_label(cls._column_to_label_translator(z), fontsize=9)
+
+                if use_log(X[0]):
+                    ax.set_xscale("log")
+                if use_log(Y[:, 0]):
+                    ax.set_yscale("log")
+                ax.set_xlim(X.min(), X.max())
+                ax.set_ylim(Y.min(), Y.max())
+                ax.grid(True, alpha=0.2, linestyle=":", which="both")
+                ax.set_xlabel(cls._column_to_label_translator(x), fontsize=9)
+                ax.set_ylabel(cls._column_to_label_translator(y), fontsize=9)
+                ax.tick_params(labelsize=8)
+
+                ratio_txt = ", ".join(
+                    f"{k.split('_')[0]}{k.split('_')[-1]}/{k.split('_')[0]}1={v:.3g}"
+                    for k, v in fixed_vals.items()
+                    if k.startswith(("K_Nm", "C_Nsm")) and not k.endswith("_1"))
+                title = f"({chr(97 + i)})"
+                if ratio_txt:
+                    title += "  " + "\n".join(textwrap.wrap(f"Held: {ratio_txt}", 45))
+                ax.set_title(title, fontsize=8)
+
+            for ax in flat[n:]:
+                ax.set_visible(False)
+
+            fig.suptitle(suptitle, fontsize=11, fontweight="bold")
+            # "outside" reserves its own strip below the subplots, so it can't overlap anything
+            fig.legend(handles=legend_handles, loc="outside lower center", ncol=2, frameon=False, fontsize=9)
+            fig.savefig(out_dir / f"2D_Contour_Z{z}_page{p}.png", dpi=300)
             plt.close(fig)
             
     @classmethod
     def generate_permutation_plots_old(cls, data, data_name) -> None:
+        data = data.copy()
         dof = max(int(m.group(1)) for col in data.columns if (m := re.fullmatch(r"X_real_m_(\d+)", col)))
         spring_norm_factor = data.iloc[0]['K_Nm_1']
         damp_norm_factor = data.iloc[0]['C_Nsm_1']

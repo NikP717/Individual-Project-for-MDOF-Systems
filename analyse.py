@@ -4,14 +4,10 @@ from models.AnalysisTools import PlotAttributes, DataPlotter, DataAnalyser
 
 # NAME =  "2DOF_FIXK_1"
 # DOF = 2
-
-NAME =  "2DOF_1_X"
+names = ["2DOF_S1", "3DOF_S1", "4DOF_S1"]
 # DataAnalyser.generate_permutation_plots(3, NAME)
-data = DataAnalyser.open_data(NAME)
-DataAnalyser.generate_receptance_plot(data, NAME)
-DataAnalyser.generate_permutation_plots(data, NAME)
-DataAnalyser.generate_permutation_plots_old(data, NAME)
-# data = DataAnalyser.open_data(NAME)
-# row = DataAnalyser.locate_data_maxima(data, 'RMS_KE_J_2')
-# model = DataAnalyser.data_row_to_MSD_model(2, row)
-# print(model.calculate_coupled_natural_fq())
+for name in names:
+    data = DataAnalyser.open_data(name)
+    DataAnalyser.generate_receptance_plot(data, name)
+    DataAnalyser.generate_permutation_plots(data, name)
+    # DataAnalyser.generate_permutation_plots_old(data, name)
